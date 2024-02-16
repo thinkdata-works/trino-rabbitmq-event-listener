@@ -7,7 +7,10 @@ import org.apache.logging.log4j.Logger;
 
 public class QueryListener implements EventListener {
     private static final Logger LOGGER = LogManager.getLogger(QueryListener.class);
-    public QueryListener() {
+    private final QueryListenerConfig config;
+
+    public QueryListener(QueryListenerConfig config) {
+        this.config = config;
     }
 
     @Override

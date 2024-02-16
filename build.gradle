@@ -10,7 +10,6 @@ buildscript {
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
 
-
 def version = '1.0.0'
 
 // Output to build/libs/shadow.jar
