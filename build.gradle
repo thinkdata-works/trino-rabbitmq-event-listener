@@ -14,7 +14,7 @@ def version = '1.0.0'
 
 // Output to build/libs/shadow.jar
 shadowJar {
-    archiveBaseName.set('trino-event-listener')
+    archiveBaseName.set('trino-rabbitmq-event-listener')
     archiveClassifier.set('')
     archiveVersion.set(version)
 }

@@ -5,15 +5,15 @@ import io.trino.spi.eventlistener.EventListenerFactory;
 
 import java.util.Map;
 
-public class QueryListenerFactory implements EventListenerFactory {
+public class RabbitmqEventListenerFactory implements EventListenerFactory {
     @Override
     public String getName() {
-        return "tdwplatform";
+        return "rabbitmq";
     }
 
     @Override
     public EventListener create(Map<String, String> config) {
-        var listenerConfig = QueryListenerConfig.create(config);
-        return new QueryListener(listenerConfig);
+        var listenerConfig = RabbitmqEventListenerConfig.create(config);
+        return new RabbitmqEventListener(listenerConfig);
     }
 }

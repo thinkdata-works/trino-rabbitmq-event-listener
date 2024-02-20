@@ -1,10 +1,10 @@
 #!/bin/bash
 
-echo "Building trino-event-listener plugin"
-docker build --tag trino-event-listener-builder .
+echo "Building trino-rabbitmq-event-listener plugin"
+docker build --tag trino-rabbitmq-event-listener-builder .
 
-echo "Copying trino-event-listener output"
+echo "Copying trino-rabbitmq-event-listener output"
 
-id=$(docker create trino-event-listener-builder)
-docker cp $id:/trino-event-listener/build/libs/trino-event-listener.jar ./build >/dev/null
+id=$(docker create trino-rabbitmq-event-listener-builder)
+docker cp $id:/trino-rabbitmq-event-listener/build/libs/trino-rabbitmq-event-listener.jar ./build >/dev/null
 docker rm -v $id
