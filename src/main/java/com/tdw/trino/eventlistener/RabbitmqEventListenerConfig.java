@@ -13,7 +13,7 @@ public class RabbitmqEventListenerConfig {
     private List<String> rabbitmqPublishOnQueues;
     private boolean rabbitmqPublishQueryCreated;
     private boolean rabbitmqPublishQueryFinished;
-    private boolean rabbitmqPublishSplitCreated;
+    private boolean rabbitmqPublishSplitCompleted;
 
     private static final String RABBITMQ_SERVER_URL = "rabbitmq-server-url";
 
@@ -25,4 +25,15 @@ public class RabbitmqEventListenerConfig {
         return new RabbitmqEventListenerConfig(config.get(RABBITMQ_SERVER_URL));
     }
 
+    public boolean publishQueryCreated() {
+        return rabbitmqPublishQueryCreated;
+    }
+
+    public boolean publishQueryFinished() {
+        return rabbitmqPublishQueryFinished;
+    }
+
+    public boolean publishSplitCompleted() {
+        return rabbitmqPublishSplitCompleted;
+    }
 }

@@ -1,9 +1,14 @@
 package com.tdw.trino.rabbitmq;
 
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.tdw.trino.eventlistener.proto.Eventlistener;
-import jdk.jfr.Event;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeoutException;
 
 public class RabbitmqClient {
     // TO support - uri, exchange name and properties
@@ -14,6 +19,14 @@ public class RabbitmqClient {
             ConnectionFactory factory = new ConnectionFactory();
             factory.setUri(uri);
             Connection connection = factory.newConnection();
+            Channel chanel = connection.createChannel();
+            chanel.exchangeDeclare(exchangeName, exchangeType, durableExchange);
+        } catch(URISyntaxException | NoSuchAlgorithmException | KeyManagementException e) {
+            // TODO
+        } catch(TimeoutException e) {
+            // TODO
+        } catch (IOException e) {
+            // TODO
         }
     }
 }
