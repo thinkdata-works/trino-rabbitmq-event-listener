@@ -9,10 +9,8 @@ import org.apache.logging.log4j.Logger;
 
 public class RabbitmqEventListener implements EventListener {
     private static final Logger LOGGER = LogManager.getLogger(RabbitmqEventListener.class);
-    private final RabbitmqEventListenerConfig config;
 
     public RabbitmqEventListener(RabbitmqEventListenerConfig config) {
-        this.config = config;
         // TODO - configure rabbitmq client
     }
 

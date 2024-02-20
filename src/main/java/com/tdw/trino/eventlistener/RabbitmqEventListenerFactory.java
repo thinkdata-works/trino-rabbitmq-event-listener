@@ -8,7 +8,7 @@ import java.util.Map;
 public class RabbitmqEventListenerFactory implements EventListenerFactory {
     @Override
     public String getName() {
-        return "rabbitmq";
+        return "rabbitmq-event-listener";
     }
 
     @Override
