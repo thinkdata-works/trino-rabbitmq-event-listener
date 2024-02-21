@@ -2,7 +2,8 @@ package com.tdw.trino.rabbitmq;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
-import com.tdw.trino.eventlistener.RabbitmqEventListenerConfig;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -13,68 +14,77 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 public class RabbitmqClient {
-    // TO support - uri, exchange name and properties
-    // Options to broadcast the three different ones
+    private static final Logger LOGGER = LogManager.getLogger(RabbitmqClient.class);
 
     private Channel channel;
-    private RabbitmqEventListenerConfig config;
+    private String uri;
+    private String exchangeName;
 
-    public RabbitmqClient(RabbitmqEventListenerConfig config) {
+    public RabbitmqClient(String url, String exchangeName, String exchangeType, boolean durable) {
         try {
-            this.config = config;
-            this.channel = getConnectionFactory(config.getUrl()).newConnection().createChannel();
-
-            // TODO - add option to declare exchange, we may not want to do this by default
-            this.channel.exchangeDeclare(config.getExchangeName(), config.getExchangeType(), config.isDurableExchange());
-        } catch(TimeoutException e) {
-            // TODO
-        } catch (IOException e) {
-            // TODO
+            this.uri = url;
+            this.exchangeName = exchangeName;
+            System.out.println("Connecting to url with exchange: " + url + "/" + exchangeName);
+            this.channel = getConnectionFactory(this.uri).newConnection().createChannel();
+            System.out.println("Created channel " + this.channel);
+            this.channel.exchangeDeclare(this.exchangeName, exchangeType, durable);
+            System.out.println("Declared exchange");
+        } catch(TimeoutException | IOException e) {
+            LOGGER.error("Unable to create Rabbitmq client, got exception " + e.getClass() + ": " + e.getMessage());
+            throw new ConnectionException(e.getMessage());
         }
     }
 
-    private static ConnectionFactory getConnectionFactory(String uri) throws IOException {
+    private static ConnectionFactory getConnectionFactory(String uri) {
         try {
             ConnectionFactory factory = new ConnectionFactory();
             factory.setUri(uri);
             return factory;
         } catch (URISyntaxException | NoSuchAlgorithmException | KeyManagementException e) {
-            // TODO - handle error properly
-            throw new IOException(e.getMessage());
+            LOGGER.error("Unable to create Rabbitmq connection factory, got exception " + e.getClass() + ": " + e.getMessage());
+            throw new ConnectionException(e.getMessage());
         }
     }
 
+    // TODO - run this async in a future?
     // TODO - add in proper payload type
-    public void Publish(String message) throws TimeoutException, IOException {
+    public void Publish(Set<String> queues, String message) {
         // Create a list of queues that we will be publishing on
         Set<String> toPublishRetry = new HashSet<>();
 
-        for(String queueName: this.config.getPublishQueues()) {
-            try  {
-                // TODO - write message to byte array
-                this.channel.basicPublish(this.config.getExchangeName(), queueName, null, null);
-            } catch(IOException e) {
-                toPublishRetry.add(queueName);
-            }
-        }
-
-        for(String queueName: toPublishRetry) {
-            // TODO - add retry logic
-            if (!this.channel.isOpen()) {
-                try {
-                    // Reset the channel
-                    this.channel = getConnectionFactory(this.config.getUrl()).newConnection().createChannel();
-                } catch (TimeoutException | IOException e) {
-                    // TODO - handle properly
-                    throw e;
+        synchronized(this) {
+            for(String queueName: queues) {
+                System.out.println("Publishing to queue " + queueName);
+                try  {
+                    // TODO - write message to byte array
+                    this.channel.basicPublish(this.exchangeName, queueName, null, null);
+                } catch(IOException e) {
+                    toPublishRetry.add(queueName);
                 }
             }
 
-            // Attempt to re-publish on the new channel
-            // TODO - write message to byte array
-            this.channel.basicPublish(this.config.getExchangeName(), queueName, null, null);
+            for(String queueName: toPublishRetry) {
+                if (!this.channel.isOpen()) {
+                    try {
+                        System.out.println("Attempting to recreating channel for publishing");
+                        // Reset the channel if it closed on us
+                        this.channel = getConnectionFactory(this.uri).newConnection().createChannel();
+                    } catch (TimeoutException | IOException e) {
+                        LOGGER.error("Unable to recreate channel for publishing. Got exception " + e.getClass() + ": " + e.getMessage());
+                        throw new PublicationException(e.getMessage());
+                    }
+                }
 
-            // TODO - what if we can't publish a second time?
+                try {
+                    // Attempt to re-publish on the new channel
+                    // TODO - write message to byte array
+                    this.channel.basicPublish(this.exchangeName, queueName, null, null);
+                } catch (IOException e) {
+                    LOGGER.error("Unable to re-publish message. Got exception " + e.getClass() + ": " + e.getMessage());
+                }
+
+                // TODO - what if we can't publish a second time? Do we retry again?
+            }
         }
     }
 }
