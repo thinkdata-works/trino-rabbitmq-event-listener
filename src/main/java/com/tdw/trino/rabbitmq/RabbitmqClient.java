@@ -2,6 +2,7 @@ package com.tdw.trino.rabbitmq;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
+import com.tdw.trino.eventlistener.RabbitmqEventListenerConfig;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -16,17 +17,15 @@ public class RabbitmqClient {
     // Options to broadcast the three different ones
 
     private Channel channel;
-    private String exchange;
-    private String uri;
+    private RabbitmqEventListenerConfig config;
 
-    public RabbitmqClient(String uri, String exchangeName, String exchangeType, boolean durableExchange) {
+    public RabbitmqClient(RabbitmqEventListenerConfig config) {
         try {
-            this.uri = uri;
-            this.exchange = exchangeName;
-            this.channel = getConnectionFactory(uri).newConnection().createChannel();
+            this.config = config;
+            this.channel = getConnectionFactory(config.getUrl()).newConnection().createChannel();
 
             // TODO - add option to declare exchange, we may not want to do this by default
-            this.channel.exchangeDeclare(exchangeName, exchangeType, durableExchange);
+            this.channel.exchangeDeclare(config.getExchangeName(), config.getExchangeType(), config.isDurableExchange());
         } catch(TimeoutException e) {
             // TODO
         } catch (IOException e) {
@@ -46,14 +45,14 @@ public class RabbitmqClient {
     }
 
     // TODO - add in proper payload type
-    public void Publish(Set<String> queueNames, String message) throws TimeoutException, IOException {
+    public void Publish(String message) throws TimeoutException, IOException {
         // Create a list of queues that we will be publishing on
         Set<String> toPublishRetry = new HashSet<>();
 
-        for(String queueName: queueNames) {
+        for(String queueName: this.config.getPublishQueues()) {
             try  {
                 // TODO - write message to byte array
-                this.channel.basicPublish(this.exchange, queueName, null, null);
+                this.channel.basicPublish(this.config.getExchangeName(), queueName, null, null);
             } catch(IOException e) {
                 toPublishRetry.add(queueName);
             }
@@ -64,7 +63,7 @@ public class RabbitmqClient {
             if (!this.channel.isOpen()) {
                 try {
                     // Reset the channel
-                    this.channel = getConnectionFactory(this.uri).newConnection().createChannel();
+                    this.channel = getConnectionFactory(this.config.getUrl()).newConnection().createChannel();
                 } catch (TimeoutException | IOException e) {
                     // TODO - handle properly
                     throw e;
@@ -73,7 +72,7 @@ public class RabbitmqClient {
 
             // Attempt to re-publish on the new channel
             // TODO - write message to byte array
-            this.channel.basicPublish(this.exchange, queueName, null, null);
+            this.channel.basicPublish(this.config.getExchangeName(), queueName, null, null);
 
             // TODO - what if we can't publish a second time?
         }

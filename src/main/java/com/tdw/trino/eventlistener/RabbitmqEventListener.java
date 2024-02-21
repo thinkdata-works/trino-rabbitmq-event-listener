@@ -1,5 +1,6 @@
 package com.tdw.trino.eventlistener;
 
+import com.tdw.trino.rabbitmq.RabbitmqClient;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
 import io.trino.spi.eventlistener.QueryCreatedEvent;
@@ -10,16 +11,17 @@ import org.apache.logging.log4j.Logger;
 public class RabbitmqEventListener implements EventListener {
     private static final Logger LOGGER = LogManager.getLogger(RabbitmqEventListener.class);
     private RabbitmqEventListenerConfig config;
+    private RabbitmqClient client;
 
     public RabbitmqEventListener(RabbitmqEventListenerConfig config) {
         this.config = config;
-        // TODO - configure rabbitmq client
+        this.client = new RabbitmqClient(config);
     }
 
     @Override
     public void queryCompleted(final QueryCompletedEvent queryCompletedEvent) {
         LOGGER.info("Received query event: " + queryCompletedEvent.toString());
-        if (!config.shouldPublishQueryCreated()) {
+        if (!config.shouldPublishQueryCompleted()) {
             // TODO - log
             return;
         }
