@@ -48,16 +48,17 @@ public class RabbitmqClient {
 
     // TODO - run this async in a future?
     // TODO - add in proper payload type
-    public void Publish(Set<String> queues, String message) {
+    public void Publish(Set<String> queues, byte[] message) {
         // Create a list of queues that we will be publishing on
         Set<String> toPublishRetry = new HashSet<>();
+
 
         synchronized(this) {
             for(String queueName: queues) {
                 System.out.println("Publishing to queue " + queueName);
                 try  {
                     // TODO - write message to byte array
-                    this.channel.basicPublish(this.exchangeName, queueName, null, null);
+                    this.channel.basicPublish(this.exchangeName, queueName, null, message);
                 } catch(IOException e) {
                     toPublishRetry.add(queueName);
                 }
@@ -78,7 +79,7 @@ public class RabbitmqClient {
                 try {
                     // Attempt to re-publish on the new channel
                     // TODO - write message to byte array
-                    this.channel.basicPublish(this.exchangeName, queueName, null, null);
+                    this.channel.basicPublish(this.exchangeName, queueName, null, message);
                 } catch (IOException e) {
                     LOGGER.error("Unable to re-publish message. Got exception " + e.getClass() + ": " + e.getMessage());
                 }
