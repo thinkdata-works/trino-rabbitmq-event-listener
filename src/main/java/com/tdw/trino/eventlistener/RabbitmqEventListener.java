@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import com.tdw.trino.rabbitmq.PublicationException;
 import com.tdw.trino.rabbitmq.RabbitmqClient;
+import com.tdw.trino.serialized.Payload;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
 import io.trino.spi.eventlistener.QueryCreatedEvent;
@@ -29,7 +30,7 @@ public class RabbitmqEventListener implements EventListener {
     @Override
     public void queryCompleted(final QueryCompletedEvent queryCompletedEvent) {
         if (config.shouldPublishQueryCompleted()) {
-            client.Publish(this.config.getQueryCompletedQueues(), toJacksonBytes(queryCompletedEvent));
+            client.Publish(this.config.getQueryCompletedQueues(), serializePayload(queryCompletedEvent));
         }
     }
 
@@ -37,24 +38,30 @@ public class RabbitmqEventListener implements EventListener {
     public void queryCreated(final QueryCreatedEvent queryCreatedEvent) {
         LOGGER.info("Received query created event");
         if (config.shouldPublishQueryCreated()) {
-            client.Publish(this.config.getQueryCreatedQueues(), toJacksonBytes(queryCreatedEvent));
+            client.Publish(this.config.getQueryCreatedQueues(), serializePayload(queryCreatedEvent));
         }
     }
 
     @Override
     public void splitCompleted(final SplitCompletedEvent splitCompletedEvent) {
         if (config.shouldPublishSplitCompleted()) {
-            client.Publish(this.config.getSplitCompletedQueues(), toJacksonBytes(splitCompletedEvent));
+            client.Publish(this.config.getSplitCompletedQueues(), serializePayload(splitCompletedEvent));
         }
     }
 
-    private byte[] toJacksonBytes(Object val) throws PublicationException {
+    // For debugging
+    private byte[] serializePayload(Object val) throws PublicationException {
         try {
-            // Register additional types to make them writeable
-            return new ObjectMapper()
+            Payload p = new Payload();
+            p.set(config.getPayloadParentKey(), val);
+            config.getCustomProperties().entrySet().forEach(prop -> {
+                p.set(prop.getKey(), prop.getValue());
+            });
+
+            ObjectMapper mapper = new ObjectMapper()
                     .registerModule(new JSR310Module())
-                    .registerModule(new Jdk8Module())
-                    .writeValueAsBytes(val);
+                    .registerModule(new Jdk8Module());
+            return mapper.writeValueAsBytes(p);
         } catch (JsonProcessingException e) {
             // TODO - get logging working
             System.out.println("Got error parsing object to json: " + e.getMessage());

@@ -14,16 +14,41 @@ Then copy the generated jar file into your Trino plugins directory
 
 Add `event-listener.properties` with the structure
 
-```
+```properties
 event-listener.name=rabbitmq-event-listener
-rabbitmq-server-url=amqp://<server-url>
-rabbitmq-exchange-name=<exchange-name>
-rabbitmq-exchange-type=<exchange-type>
-rabbitmq-durable-exchange=<true|false>
-rabbitmq-publish-query-created=<true|false>
-rabbitmq-query-created-queues=<separated-list>
-rabbitmq-publish-query-completed=<true|false>
-rabbitmq-query-completed-queues=<separated-list>
-rabbitmq-publish-split-completed=<true|false>
-rabbitmq-split-completed-queues=<separated-list>
+server-url=amqp://<server-url>
+exchange-name=<exchange-name>
+exchange-type=<exchange-type>
+durable-exchange=<true|false>
+publish-query-created=<true|false>
+query-created-queues=<separated-list>
+publish-query-completed=<true|false>
+query-completed-queues=<separated-list>
+publish-split-completed=<true|false>
+split-completed-queues=<separated-list>
+payload-parent-keys=<key1>.<key2>...
+x-custom-<key_string1>=<value1>
+x-custom-<key_string2>=<value2>
+...
+x-custom-<key_stringN>=<valueN>
 ```
+
+# Parent nesting key & payload publication
+
+The payload will be published on the queue like
+
+```json
+{
+  "<payload-parent-key1>": {
+    "<payload-parent-key2>": {
+      "<trino-field1>": "...",
+      "<trino-field2>": "..."
+    },
+    "x-custom-<key_string1>": "<value1>",
+    "x-custom-<key_stringN>": "<valueN>"
+  }
+}
+```
+
+The parent keys will determine where the payload is nested inside. 
+The custom properties will live as a sibling field to the payload

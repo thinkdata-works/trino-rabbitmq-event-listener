@@ -1,6 +1,7 @@
 package com.tdw.trino.eventlistener;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -37,6 +38,14 @@ public class RabbitmqEventListenerConfig {
         return splitCompletedQueues;
     }
 
+    public String getPayloadParentKey() {
+        return this.payloadParentKey;
+    }
+
+    public Map<String, String> getCustomProperties() {
+        return this.customProperties;
+    }
+
     private String url;
     private String exchangeName;
     private String exchangeType;
@@ -44,23 +53,29 @@ public class RabbitmqEventListenerConfig {
     private Set<String> queryCreatedQueues;
     private Set<String> queryCompletedQueues;
     private Set<String> splitCompletedQueues;
+    private String payloadParentKey;
+    private Map<String, String> customProperties;
     private boolean publishQueryCreated;
     private boolean publishQueryCompleted;
     private boolean publishSplitCompleted;
 
-    private static final String RABBITMQ_SERVER_URL = "rabbitmq-server-url";
-    private static final String RABBITMQ_EXCHANGE_NAME = "rabbitmq-exchange-name";
-    private static final String RABBITMQ_EXCHANGE_TYPE = "rabbitmq-exchange-type";
-    private static final String RABBITMQ_DURABLE_EXCHANGE = "rabbitmq-durable-exchange";
+    private static final String SERVER_URL = "server-url";
+    private static final String EXCHANGE_NAME = "exchange-name";
+    private static final String EXCHANGE_TYPE = "exchange-type";
+    private static final String DURABLE_EXCHANGE = "durable-exchange";
 
-    private static final String RABBITMQ_PUBLISH_QUERY_CREATED = "rabbitmq-publish-query-created";
-    private static final String RABBITMQ_QUERY_CREATED_QUEUES = "rabbitmq-query-created-queues";
+    private static final String PUBLISH_QUERY_CREATED = "publish-query-created";
+    private static final String QUERY_CREATED_QUEUES = "query-created-queues";
 
-    private static final String RABBITMQ_PUBLISH_QUERY_COMPLETED = "rabbitmq-publish-query-completed";
-    private static final String RABBITMQ_QUERY_COMPLETED_QUEUES = "rabbitmq-query-completed-queues";
+    private static final String PUBLISH_QUERY_COMPLETED = "publish-query-completed";
+    private static final String QUERY_COMPLETED_QUEUES = "query-completed-queues";
 
-    private static final String RABBITMQ_PUBLISH_SPLIT_COMPLETED = "rabbitmq-publish-split-completed";
-    private static final String RABBITMQ_SPLIT_COMPLETED_QUEUES = "rabbitmq-split-completed-queues";
+    private static final String PUBLISH_SPLIT_COMPLETED = "publish-split-completed";
+    private static final String SPLIT_COMPLETED_QUEUES = "split-completed-queues";
+
+    // TODO - need to turn to a period-separated list
+    private static final String PAYLOAD_PARENT_KEYS = "payload-parent-keys";
+    private static final String CUSTOM_PROPERTIES_PATTERN = "x-custom-";
 
     public static class Builder {
         // required params
@@ -77,6 +92,8 @@ public class RabbitmqEventListenerConfig {
         private String queryCompletedQueues;
         private boolean publishSplitCompleted;
         private String splitCompletedQueues;
+        private Map<String, String> customProperties;
+        private String payloadParentKey;
 
         public Builder(String url, String exchangeName, String exchangeType) {
             // Assign values
@@ -89,6 +106,7 @@ public class RabbitmqEventListenerConfig {
             this.publishQueryCreated = false;
             this.publishQueryCompleted = false;
             this.publishSplitCompleted = false;
+            this.customProperties = new HashMap<>();
         }
 
         public Builder setDurableExchange(boolean durableExchange) {
@@ -114,26 +132,41 @@ public class RabbitmqEventListenerConfig {
             return this;
         }
 
+        public Builder setPayloadParentKey(String payloadParentKey) {
+            this.payloadParentKey = payloadParentKey;
+            return this;
+        }
+
+        public Builder addCustomProperty(String key, String value) {
+            this.customProperties.put(key, value);
+            return this;
+        }
+
         public RabbitmqEventListenerConfig Build() throws IllegalArgumentException {
             // Split queue names and enforce argument exception based on boolean setting
             Set<String> queryCreatedQueueNames = Arrays.stream(this.queryCreatedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
             if (this.publishQueryCreated && queryCreatedQueueNames.size() < 1) {
-                throw new IllegalArgumentException("At least one queue name must be supplied for " + RABBITMQ_QUERY_CREATED_QUEUES);
+                throw new IllegalArgumentException("At least one queue name must be supplied for " + QUERY_CREATED_QUEUES);
             }
 
             Set<String> queryCompletedQueueNames = Arrays.stream(this.queryCompletedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
             if (this.publishQueryCompleted && queryCompletedQueueNames.size() < 1) {
-                throw new IllegalArgumentException("At least one queue name must be supplied for " + RABBITMQ_QUERY_COMPLETED_QUEUES);
+                throw new IllegalArgumentException("At least one queue name must be supplied for " + QUERY_COMPLETED_QUEUES);
             }
 
             Set<String> splitCompletedQueueNames = Arrays.stream(this.splitCompletedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
             if (this.publishSplitCompleted && splitCompletedQueueNames.size() < 1) {
-                throw new IllegalArgumentException("At least one queue name must be supplied for " + RABBITMQ_SPLIT_COMPLETED_QUEUES);
+                throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
+            }
+
+            if (this.payloadParentKey == null || this.payloadParentKey == "") {
+                throw new IllegalArgumentException("Payload parent key must be provided");
             }
 
             return new RabbitmqEventListenerConfig(
-                this.url, this.exchangeName, this.exchangeType, queryCreatedQueueNames, queryCompletedQueueNames, splitCompletedQueueNames, this.durableExchange,
-                    this.publishQueryCreated, this.publishQueryCompleted, this.publishSplitCompleted
+                this.url, this.exchangeName, this.exchangeType, queryCreatedQueueNames, queryCompletedQueueNames, splitCompletedQueueNames,
+                    payloadParentKey, this.customProperties,
+                    this.durableExchange, this.publishQueryCreated, this.publishQueryCompleted, this.publishSplitCompleted
             );
         }
      }
@@ -145,6 +178,8 @@ public class RabbitmqEventListenerConfig {
             Set<String> queryCreatedQueueNames,
             Set<String> queryCompletedQueueNames,
             Set<String> splitCompletedQueueNames,
+            String payloadParentKey,
+            Map<String, String> customProperties,
             boolean durableExchange,
             boolean publishQueryCreated,
             boolean publishQueryCompleted,
@@ -156,6 +191,8 @@ public class RabbitmqEventListenerConfig {
         this.queryCreatedQueues = queryCreatedQueueNames;
         this.queryCompletedQueues = queryCompletedQueueNames;
         this.splitCompletedQueues = splitCompletedQueueNames;
+        this.payloadParentKey = payloadParentKey;
+        this.customProperties = customProperties;
         this.durableExchange = durableExchange;
         this.publishQueryCreated = publishQueryCreated;
         this.publishQueryCompleted = publishQueryCompleted;
@@ -165,25 +202,35 @@ public class RabbitmqEventListenerConfig {
     public static RabbitmqEventListenerConfig create(Map<String, String> config) {
         // Extract and create builder
         RabbitmqEventListenerConfig.Builder builder = new Builder(
-                config.get(RABBITMQ_SERVER_URL),
-                config.get(RABBITMQ_EXCHANGE_NAME),
-                config.get(RABBITMQ_EXCHANGE_TYPE)
+                config.get(SERVER_URL),
+                config.get(EXCHANGE_NAME),
+                config.get(EXCHANGE_TYPE)
         );
 
-        builder.setDurableExchange(parseBoolFromConfigValue(config.get(RABBITMQ_DURABLE_EXCHANGE), false));
+        builder.setDurableExchange(parseBoolFromConfigValue(config.get(DURABLE_EXCHANGE), false));
         builder.setPublishQueryCreated(
-                parseBoolFromConfigValue(config.get(RABBITMQ_PUBLISH_QUERY_CREATED), false),
-                config.getOrDefault(RABBITMQ_QUERY_CREATED_QUEUES, "")
+                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_CREATED), false),
+                config.getOrDefault(QUERY_CREATED_QUEUES, "")
         );
         builder.setPublishQueryCompleted(
-                parseBoolFromConfigValue(config.get(RABBITMQ_PUBLISH_QUERY_COMPLETED), false),
-                config.getOrDefault(RABBITMQ_QUERY_COMPLETED_QUEUES, "")
+                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_COMPLETED), false),
+                config.getOrDefault(QUERY_COMPLETED_QUEUES, "")
         );
         builder.setPublishSplitCompleted(
-                parseBoolFromConfigValue(config.get(RABBITMQ_PUBLISH_SPLIT_COMPLETED), false),
-                config.getOrDefault(RABBITMQ_SPLIT_COMPLETED_QUEUES, "")
+                parseBoolFromConfigValue(config.get(PUBLISH_SPLIT_COMPLETED), false),
+                config.getOrDefault(SPLIT_COMPLETED_QUEUES, "")
+        );
+        builder.setPayloadParentKey(
+                config.getOrDefault(PAYLOAD_PARENT_KEYS, "")
         );
 
+        // See if config has any keys that match the custom pattern
+        config.entrySet().stream().forEach(configEntry -> {
+            String key = configEntry.getKey();
+            if (key.startsWith(CUSTOM_PROPERTIES_PATTERN)) {
+               builder.addCustomProperty(key, config.get(key));
+           }
+        });
 
         return builder.Build();
     }
