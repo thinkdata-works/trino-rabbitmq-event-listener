@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-// TODO - add support for routing key?
-
 public class RabbitmqEventListenerConfig {
     public String getUrl() {
         return url;
@@ -81,7 +79,6 @@ public class RabbitmqEventListenerConfig {
         // required params
         private String url;
         private String exchangeName;
-
 
         // defaulted params
         private String exchangeType;
@@ -159,7 +156,6 @@ public class RabbitmqEventListenerConfig {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
             }
 
-            System.out.println("Using payload parent keys " + payloadParentKeys);
             List<String> payloadParentKeys = Arrays.stream(this.payloadParentKeys.split(".")).collect(Collectors.toList());
             if(payloadParentKeys.size() < 1 || payloadParentKeys.get(0) == "") {
                 throw new IllegalArgumentException("At least 1 key must be supplied for " + PAYLOAD_PARENT_KEYS);

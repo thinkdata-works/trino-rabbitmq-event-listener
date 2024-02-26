@@ -11,16 +11,13 @@ import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
 import io.trino.spi.eventlistener.QueryCreatedEvent;
 import io.trino.spi.eventlistener.SplitCompletedEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public class RabbitmqEventListener implements EventListener {
-    private static final Logger LOGGER = LogManager.getLogger(RabbitmqEventListener.class);
-
     private RabbitmqEventListenerConfig config;
     private RabbitmqClient client;
 
@@ -28,30 +25,37 @@ public class RabbitmqEventListener implements EventListener {
         this.config = config;
         this.client = new RabbitmqClient(config.getUrl(), config.getExchangeName(), config.getExchangeType(), config.isDurableExchange());
     }
-
-    // TODO - move all publication to a future where we can capture the exception without interruption
+    
     @Override
     public void queryCompleted(final QueryCompletedEvent queryCompletedEvent) {
         if (config.shouldPublishQueryCompleted()) {
-            client.Publish(this.config.getQueryCompletedQueues(), serializePayload(queryCompletedEvent));
+            publishMessage(this.config.getQueryCompletedQueues(), serializePayload(queryCompletedEvent));
         }
     }
 
     @Override
     public void queryCreated(final QueryCreatedEvent queryCreatedEvent) {
         if (config.shouldPublishQueryCreated()) {
-            client.Publish(this.config.getQueryCreatedQueues(), serializePayload(queryCreatedEvent));
+            publishMessage(this.config.getQueryCreatedQueues(), serializePayload(queryCreatedEvent));
         }
     }
 
     @Override
     public void splitCompleted(final SplitCompletedEvent splitCompletedEvent) {
         if (config.shouldPublishSplitCompleted()) {
-            client.Publish(this.config.getSplitCompletedQueues(), serializePayload(splitCompletedEvent));
+            publishMessage(this.config.getSplitCompletedQueues(), serializePayload(splitCompletedEvent));
         }
     }
 
-    // For debugging
+    private void publishMessage(Set<String> queues, byte[] message) {
+        try {
+            client.Publish(queues, message);
+        } catch (Exception e) {
+            // Print error and continue so that Trino behaviour is not interrupted
+            System.err.println("Attempted to publish message but got " + e.getClass() + ": " + e.getMessage());
+        }
+    }
+
     private byte[] serializePayload(Object val) throws PublicationException {
         try {
             ObjectMapper mapper = new ObjectMapper()
@@ -61,10 +65,7 @@ public class RabbitmqEventListener implements EventListener {
                     constructPayload(config.getPayloadParentKeys(), config.getCustomProperties(), val)
             );
         } catch (JsonProcessingException e) {
-            // TODO - get logging working
-            System.out.println("Got error parsing object to json: " + e.getMessage());
-            System.out.println("Payload: " + val.toString());
-            throw new PublicationException("Got JSON processing error writing " + val);
+            throw new PublicationException("Got JSON processing error payload: " + e.getMessage());
         }
     }
 
