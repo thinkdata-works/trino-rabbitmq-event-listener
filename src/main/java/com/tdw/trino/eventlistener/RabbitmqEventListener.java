@@ -14,7 +14,6 @@ import io.trino.spi.eventlistener.SplitCompletedEvent;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 
 public class RabbitmqEventListener implements EventListener {
@@ -25,34 +24,40 @@ public class RabbitmqEventListener implements EventListener {
         this.config = config;
         this.client = new RabbitmqClient(config.getUrl(), config.getExchangeName(), config.getExchangeType(), config.isDurableExchange());
     }
-    
+
     @Override
     public void queryCompleted(final QueryCompletedEvent queryCompletedEvent) {
         if (config.shouldPublishQueryCompleted()) {
-            publishMessage(this.config.getQueryCompletedQueues(), serializePayload(queryCompletedEvent));
+            try {
+                client.Publish(this.config.getQueryCompletedQueues(), serializePayload(queryCompletedEvent));
+            } catch (Exception e) {
+                // Print error and continue so that Trino behaviour is not interrupted
+                System.err.println("Attempted to publish message but got " + e.getClass() + ": " + e.getMessage());
+            }
         }
     }
 
     @Override
     public void queryCreated(final QueryCreatedEvent queryCreatedEvent) {
         if (config.shouldPublishQueryCreated()) {
-            publishMessage(this.config.getQueryCreatedQueues(), serializePayload(queryCreatedEvent));
+            try {
+                client.Publish(this.config.getQueryCreatedQueues(), serializePayload(queryCreatedEvent));
+            } catch (Exception e) {
+                // Print error and continue so that Trino behaviour is not interrupted
+                System.err.println("Attempted to publish message but got " + e.getClass() + ": " + e.getMessage());
+            }
         }
     }
 
     @Override
     public void splitCompleted(final SplitCompletedEvent splitCompletedEvent) {
         if (config.shouldPublishSplitCompleted()) {
-            publishMessage(this.config.getSplitCompletedQueues(), serializePayload(splitCompletedEvent));
-        }
-    }
-
-    private void publishMessage(Set<String> queues, byte[] message) {
-        try {
-            client.Publish(queues, message);
-        } catch (Exception e) {
-            // Print error and continue so that Trino behaviour is not interrupted
-            System.err.println("Attempted to publish message but got " + e.getClass() + ": " + e.getMessage());
+            try {
+                client.Publish(this.config.getSplitCompletedQueues(), serializePayload(splitCompletedEvent));
+            } catch (Exception e) {
+                // Print error and continue so that Trino behaviour is not interrupted
+                System.err.println("Attempted to publish message but got " + e.getClass() + ": " + e.getMessage());
+            }
         }
     }
 

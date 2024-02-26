@@ -44,7 +44,6 @@ public class RabbitmqClient {
         // Lock on this publisher because we may need to re-open the channel if it's closed
         synchronized(this) {
             for(String queueName: queues) {
-                System.out.println("Publishing to queue " + queueName);
                 try  {
                     this.channel.basicPublish(this.exchangeName, queueName, null, message);
                 } catch(IOException e) {

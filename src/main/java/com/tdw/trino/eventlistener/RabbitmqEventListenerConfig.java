@@ -156,8 +156,8 @@ public class RabbitmqEventListenerConfig {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
             }
 
-            List<String> payloadParentKeys = Arrays.stream(this.payloadParentKeys.split(".")).collect(Collectors.toList());
-            if(payloadParentKeys.size() < 1 || payloadParentKeys.get(0) == "") {
+            List<String> payloadParentKeys = Arrays.stream(this.payloadParentKeys.split("\\.")).toList();
+            if(payloadParentKeys.size() < 1 || payloadParentKeys.get(0).equals("")) {
                 throw new IllegalArgumentException("At least 1 key must be supplied for " + PAYLOAD_PARENT_KEYS);
             }
 
