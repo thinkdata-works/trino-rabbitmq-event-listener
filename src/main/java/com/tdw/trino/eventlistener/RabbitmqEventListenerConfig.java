@@ -2,6 +2,7 @@ package com.tdw.trino.eventlistener;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -38,8 +39,8 @@ public class RabbitmqEventListenerConfig {
         return splitCompletedQueues;
     }
 
-    public String getPayloadParentKey() {
-        return this.payloadParentKey;
+    public List<String> getPayloadParentKeys() {
+        return this.payloadParentKeys;
     }
 
     public Map<String, String> getCustomProperties() {
@@ -53,7 +54,7 @@ public class RabbitmqEventListenerConfig {
     private Set<String> queryCreatedQueues;
     private Set<String> queryCompletedQueues;
     private Set<String> splitCompletedQueues;
-    private String payloadParentKey;
+    private List<String> payloadParentKeys;
     private Map<String, String> customProperties;
     private boolean publishQueryCreated;
     private boolean publishQueryCompleted;
@@ -73,7 +74,6 @@ public class RabbitmqEventListenerConfig {
     private static final String PUBLISH_SPLIT_COMPLETED = "publish-split-completed";
     private static final String SPLIT_COMPLETED_QUEUES = "split-completed-queues";
 
-    // TODO - need to turn to a period-separated list
     private static final String PAYLOAD_PARENT_KEYS = "payload-parent-keys";
     private static final String CUSTOM_PROPERTIES_PATTERN = "x-custom-";
 
@@ -93,7 +93,7 @@ public class RabbitmqEventListenerConfig {
         private boolean publishSplitCompleted;
         private String splitCompletedQueues;
         private Map<String, String> customProperties;
-        private String payloadParentKey;
+        private String payloadParentKeys;
 
         public Builder(String url, String exchangeName, String exchangeType) {
             // Assign values
@@ -132,8 +132,8 @@ public class RabbitmqEventListenerConfig {
             return this;
         }
 
-        public Builder setPayloadParentKey(String payloadParentKey) {
-            this.payloadParentKey = payloadParentKey;
+        public Builder setPayloadParentKeys(String payloadParentKeys) {
+            this.payloadParentKeys = payloadParentKeys;
             return this;
         }
 
@@ -159,13 +159,15 @@ public class RabbitmqEventListenerConfig {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
             }
 
-            if (this.payloadParentKey == null || this.payloadParentKey == "") {
-                throw new IllegalArgumentException("Payload parent key must be provided");
+            System.out.println("Using payload parent keys " + payloadParentKeys);
+            List<String> payloadParentKeys = Arrays.stream(this.payloadParentKeys.split(".")).collect(Collectors.toList());
+            if(payloadParentKeys.size() < 1 || payloadParentKeys.get(0) == "") {
+                throw new IllegalArgumentException("At least 1 key must be supplied for " + PAYLOAD_PARENT_KEYS);
             }
 
             return new RabbitmqEventListenerConfig(
                 this.url, this.exchangeName, this.exchangeType, queryCreatedQueueNames, queryCompletedQueueNames, splitCompletedQueueNames,
-                    payloadParentKey, this.customProperties,
+                    payloadParentKeys, this.customProperties,
                     this.durableExchange, this.publishQueryCreated, this.publishQueryCompleted, this.publishSplitCompleted
             );
         }
@@ -178,7 +180,7 @@ public class RabbitmqEventListenerConfig {
             Set<String> queryCreatedQueueNames,
             Set<String> queryCompletedQueueNames,
             Set<String> splitCompletedQueueNames,
-            String payloadParentKey,
+            List<String> payloadParentKeys,
             Map<String, String> customProperties,
             boolean durableExchange,
             boolean publishQueryCreated,
@@ -191,7 +193,7 @@ public class RabbitmqEventListenerConfig {
         this.queryCreatedQueues = queryCreatedQueueNames;
         this.queryCompletedQueues = queryCompletedQueueNames;
         this.splitCompletedQueues = splitCompletedQueueNames;
-        this.payloadParentKey = payloadParentKey;
+        this.payloadParentKeys = payloadParentKeys;
         this.customProperties = customProperties;
         this.durableExchange = durableExchange;
         this.publishQueryCreated = publishQueryCreated;
@@ -220,7 +222,7 @@ public class RabbitmqEventListenerConfig {
                 parseBoolFromConfigValue(config.get(PUBLISH_SPLIT_COMPLETED), false),
                 config.getOrDefault(SPLIT_COMPLETED_QUEUES, "")
         );
-        builder.setPayloadParentKey(
+        builder.setPayloadParentKeys(
                 config.getOrDefault(PAYLOAD_PARENT_KEYS, "")
         );
 
