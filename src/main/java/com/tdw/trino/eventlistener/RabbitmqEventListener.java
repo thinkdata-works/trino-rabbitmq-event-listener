@@ -17,8 +17,8 @@ import java.util.Map;
 
 
 public class RabbitmqEventListener implements EventListener {
-    private RabbitmqEventListenerConfig config;
-    private RabbitmqClient client;
+    private final RabbitmqEventListenerConfig config;
+    private final RabbitmqClient client;
 
     public RabbitmqEventListener(RabbitmqEventListenerConfig config) {
         this.config = config;
