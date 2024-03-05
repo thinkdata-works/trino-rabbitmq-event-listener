@@ -1,2 +1,2 @@
-rootProject.name = 'trino-event-listener'
+rootProject.name = 'trino-rabbitmq-event-listener'
 
