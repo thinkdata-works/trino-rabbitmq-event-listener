@@ -1,6 +1,13 @@
 # Trino Rabbitmq Event Listener
 
-Event listener plugin for Trino to send query and split events to rabbitmq.
+Event listener plugin for Trino to send query and split events to rabbitmq. 
+
+Features:
+- specify which events can be published
+- configure exchange and exchange types
+- publish events to mutliple queues
+- specify payload construction before queue publication
+- append custom properties to be sent along with the event payload
 
 ## Building
 
@@ -15,7 +22,7 @@ Then copy the generated jar file into your Trino plugins directory
 Add `event-listener.properties` with the structure
 
 ```properties
-event-listener.name=rabbitmq-event-listener
+event-listener.name=rabbitmq
 server-url=amqp://<server-url>
 exchange-name=<exchange-name>
 exchange-type=<exchange-type>
@@ -52,3 +59,7 @@ The payload will be published on the queue like
 
 The parent keys will determine where the payload is nested inside. 
 The custom properties will live as a sibling field to the payload
+
+# License
+
+This plugin is licensed under the Apache 2.0 License, found in the LICENSE file.
