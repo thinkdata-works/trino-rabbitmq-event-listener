@@ -1,17 +1,24 @@
 # Trino Rabbitmq Event Listener
 
-Event listener plugin for Trino to send query and split events to rabbitmq. Trino provides a event-listener plugin
-framework to receive notifications when (1) queries are created, (2) queries are finished, or (3) splits are completed.
+Event listener plugin for Trino to send query and split events to RabbitMQ. Trino provides a event-listener plugin
+framework to receive notifications when:
+
+1. Trino Queries have been created
+2. Trino Queries have completed
+3. Splits have completed
+
 The event payload contains a wealth of information such as:
-- what query has been run and who ran it
-- what columns and tables has the query touched
-- whether the query succeeded or failed
-- performance statistics for the query
 
-Currently, Trino only supplies built in support for HTTP and MySQL event listeners.
+- the query itself
+- which user ran the query
+- the tables, schemas, catalogs, and columns effected by the query or split
+- whether the query or split succeeded or failed
+- comprehensive performance statistics for the query or split
 
-This plugin allows these event messages to be published to Rabbitmq. It includes the abilities to:
-- specify which events are published
+Currently, Trino only supplies built in support for HTTP and MySQL event listeners. This plugin allows these event messages to be published to RabbitMQ. It includes the abilities to:
+
+- suppress exceptions so that RabbitMQ live-ness does not interfere with trino operations
+- specify which of the query events should be published
 - configure the exchange and type for publication
 - publish the same event to multiple queues
 - specify the payload structure before publication
@@ -19,7 +26,7 @@ This plugin allows these event messages to be published to Rabbitmq. It includes
 
 ## Building and Distributing
 
-The distributed is a fatjar that contains all dependencies. The build procedure uses docker, and can be run with:
+The plugin is distributed as a shadowjar that contains all dependencies. The build procedure uses docker, and can be run with:
 
 ```bash
 ./build.sh
@@ -33,9 +40,9 @@ Registering properties file (default `event-listener.properties`)
 
 | key                          | required | notes                                                                                                         |
 |------------------------------|----------|---------------------------------------------------------------------------------------------------------------|
-| `event-listener.name`        | Y        | must be rabbitmq in order to locate the plugin                                                                |
+| `event-listener.name`        | Y        | must be `rabbitmq` in order to locate the plugin                                                              |
 | `server-url`                 | Y        | url for connecting, formatted like as a connection string like `amqp://...`                                   |
-| `suppress-connection-errors` | N        | defaults to `false`, suppresses exceptions if rabbitmq is unavailable to connect to. Will still log to stderr |
+| `suppress-connection-errors` | N        | defaults to `false`, suppresses exceptions if RabbitMQ is unavailable to connect to. Will still log to stderr |
 | `exchange-name`              | Y        | name of the exchange to declare/publish to                                                                    |
 | `exchange-type`              | Y        | type of exchange to declare/publish to                                                                        |
 | `durable-exchange`           | N        | defaults to `false`                                                                                           |
