@@ -25,6 +25,14 @@ public class RabbitmqEventListenerConfig {
         return durableExchange;
     }
 
+    public boolean shouldSuppressConnectionErrors() {
+        return suppressConnectionErrors;
+    }
+
+    public boolean shouldSuppressPublicationErrors() {
+        return suppressPublicationErrors;
+    }
+
     public Set<String> getQueryCreatedQueues() {
         return queryCreatedQueues;
     }
@@ -49,6 +57,8 @@ public class RabbitmqEventListenerConfig {
     private String exchangeName;
     private String exchangeType;
     private boolean durableExchange;
+    private boolean suppressConnectionErrors;
+    private boolean suppressPublicationErrors;
     private Set<String> queryCreatedQueues;
     private Set<String> queryCompletedQueues;
     private Set<String> splitCompletedQueues;
@@ -59,6 +69,7 @@ public class RabbitmqEventListenerConfig {
     private boolean publishSplitCompleted;
 
     private static final String SERVER_URL = "server-url";
+    private static final String SUPPRESS_CONNECTION_ERRORS = "suppress-connection-errors";
     private static final String EXCHANGE_NAME = "exchange-name";
     private static final String EXCHANGE_TYPE = "exchange-type";
     private static final String DURABLE_EXCHANGE = "durable-exchange";
@@ -79,6 +90,7 @@ public class RabbitmqEventListenerConfig {
         // required params
         private String url;
         private String exchangeName;
+        private boolean suppressConnectionErrors;
 
         // defaulted params
         private String exchangeType;
@@ -92,6 +104,8 @@ public class RabbitmqEventListenerConfig {
         private Map<String, String> customProperties;
         private String payloadParentKeys;
 
+
+
         public Builder(String url, String exchangeName, String exchangeType) {
             // Assign values
             this.url = url;
@@ -100,6 +114,7 @@ public class RabbitmqEventListenerConfig {
 
             // Assign defaults
             this.durableExchange = false;
+            this.suppressConnectionErrors = false;
             this.publishQueryCreated = false;
             this.publishQueryCompleted = false;
             this.publishSplitCompleted = false;
@@ -108,6 +123,11 @@ public class RabbitmqEventListenerConfig {
 
         public Builder setDurableExchange(boolean durableExchange) {
             this.durableExchange = durableExchange;
+            return this;
+        }
+
+        public Builder setSuppressConnectionErrors(boolean suppressConnectionErrors) {
+            this.suppressConnectionErrors = suppressConnectionErrors;
             return this;
         }
 
@@ -140,6 +160,9 @@ public class RabbitmqEventListenerConfig {
         }
 
         public RabbitmqEventListenerConfig Build() throws IllegalArgumentException {
+            // TODO - ensure that server url, exchange name and type are all set
+
+
             // Split queue names and enforce argument exception based on boolean setting
             Set<String> queryCreatedQueueNames = Arrays.stream(this.queryCreatedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
             if (this.publishQueryCreated && queryCreatedQueueNames.size() < 1) {
@@ -156,15 +179,11 @@ public class RabbitmqEventListenerConfig {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
             }
 
-            List<String> payloadParentKeys = Arrays.stream(this.payloadParentKeys.split("\\.")).toList();
-            if(payloadParentKeys.size() < 1 || payloadParentKeys.get(0).equals("")) {
-                throw new IllegalArgumentException("At least 1 key must be supplied for " + PAYLOAD_PARENT_KEYS);
-            }
-
             return new RabbitmqEventListenerConfig(
                 this.url, this.exchangeName, this.exchangeType, queryCreatedQueueNames, queryCompletedQueueNames, splitCompletedQueueNames,
-                    payloadParentKeys, this.customProperties,
-                    this.durableExchange, this.publishQueryCreated, this.publishQueryCompleted, this.publishSplitCompleted
+                    Arrays.stream(this.payloadParentKeys.split("\\.")).toList(), this.customProperties,
+                    this.durableExchange,this.suppressConnectionErrors,
+                    this.publishQueryCreated, this.publishQueryCompleted, this.publishSplitCompleted
             );
         }
      }
@@ -179,6 +198,7 @@ public class RabbitmqEventListenerConfig {
             List<String> payloadParentKeys,
             Map<String, String> customProperties,
             boolean durableExchange,
+            boolean suppressConnectionErrors,
             boolean publishQueryCreated,
             boolean publishQueryCompleted,
             boolean publishSplitCompleted
@@ -192,6 +212,7 @@ public class RabbitmqEventListenerConfig {
         this.payloadParentKeys = payloadParentKeys;
         this.customProperties = customProperties;
         this.durableExchange = durableExchange;
+        this.suppressConnectionErrors = suppressConnectionErrors;
         this.publishQueryCreated = publishQueryCreated;
         this.publishQueryCompleted = publishQueryCompleted;
         this.publishSplitCompleted = publishSplitCompleted;
@@ -200,25 +221,23 @@ public class RabbitmqEventListenerConfig {
     public static RabbitmqEventListenerConfig create(Map<String, String> config) {
         // Extract and create builder
         RabbitmqEventListenerConfig.Builder builder = new Builder(
-                config.get(SERVER_URL),
-                config.get(EXCHANGE_NAME),
-                config.get(EXCHANGE_TYPE)
-        );
-
-        builder.setDurableExchange(parseBoolFromConfigValue(config.get(DURABLE_EXCHANGE), false));
-        builder.setPublishQueryCreated(
+                config.getOrDefault(SERVER_URL, ""),
+                config.getOrDefault(EXCHANGE_NAME, ""),
+                config.getOrDefault(EXCHANGE_TYPE, "")
+        ).setDurableExchange(
+                parseBoolFromConfigValue(config.get(DURABLE_EXCHANGE), false)
+        ).setSuppressConnectionErrors(
+                parseBoolFromConfigValue(config.get(SUPPRESS_CONNECTION_ERRORS), false)
+        ).setPublishQueryCreated(
                 parseBoolFromConfigValue(config.get(PUBLISH_QUERY_CREATED), false),
                 config.getOrDefault(QUERY_CREATED_QUEUES, "")
-        );
-        builder.setPublishQueryCompleted(
+        ).setPublishQueryCompleted(
                 parseBoolFromConfigValue(config.get(PUBLISH_QUERY_COMPLETED), false),
                 config.getOrDefault(QUERY_COMPLETED_QUEUES, "")
-        );
-        builder.setPublishSplitCompleted(
+        ).setPublishSplitCompleted(
                 parseBoolFromConfigValue(config.get(PUBLISH_SPLIT_COMPLETED), false),
                 config.getOrDefault(SPLIT_COMPLETED_QUEUES, "")
-        );
-        builder.setPayloadParentKeys(
+        ).setPayloadParentKeys(
                 config.getOrDefault(PAYLOAD_PARENT_KEYS, "")
         );
 

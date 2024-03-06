@@ -27,13 +27,33 @@ The distributed is a fatjar that contains all dependencies. The build procedure 
 
 The constructed jar must be added to the plugin directory in Trino, which should be located in a plugin path like `/usr/lib/trino/plugin/rabbitmq-event-listener/*.jar`.
 
-## Registering the Plugin
+## Properties and configuration
 
-Add `event-listener.properties` with the structure
+Registering properties file (default `event-listener.properties`)
+
+| key                          | required | notes                                                                                                         |
+|------------------------------|----------|---------------------------------------------------------------------------------------------------------------|
+| `event-listener.name`        | Y        | must be rabbitmq in order to locate the plugin                                                                |
+| `server-url`                 | Y        | url for connecting, formatted like as a connection string like `amqp://...`                                   |
+| `suppress-connection-errors` | N        | defaults to `false`, suppresses exceptions if rabbitmq is unavailable to connect to. Will still log to stderr |
+| `exchange-name`              | Y        | name of the exchange to declare/publish to                                                                    |
+| `exchange-type`              | Y        | type of exchange to declare/publish to                                                                        |
+| `durable-exchange`           | N        | defaults to `false`                                                                                           |
+| `publish-query-created`      | N        | defaults to `false` - publishes payload for query created events                                              |                                   
+| `query-created-queues`       | N        | comma-separated list of strings corresponding to queue names to publish on for query created events           |
+| `publish-query-completed`    | N        | defaults to `false` - publishes payload for query completed events                                            |
+| `query-completed-queues`     | N        | comma-separated list of strings corresponding to queue names to publish on for query created events           |
+| `publish-split-completed`    | N        | defaults to `false` - publishes payload for split completed events                                            |
+| `split-completed-queues`     | N        | comma-separated list of strings corresponding to queue names to publish on for split created events           |
+| `payload-parent-keys`        | N        | see section below                                                                                             |
+| `x-custom-<key>`             | N        | see section below                                                                                             |
+
+## Example configuration
 
 ```properties
 event-listener.name=rabbitmq
 server-url=amqp://<server-url>
+suppress-connection-errors=<true|false>
 exchange-name=<exchange-name>
 exchange-type=<exchange-type>
 durable-exchange=<true|false>
@@ -68,15 +88,17 @@ It should then pick up the listener from the properties
 <timestamp>   INFO	main	io.trino.eventlistener.EventListenerManager	-- Loaded event listener /data/trino/etc/events/rabbitmq-event-listener.properties --
 ```
 
+## Parent nesting key & payload publication
+
+The structure of the payload can be configurable, such that the payload Trino creates can be nested under some number of keys.
+If omitted, then the payload will not be given any nesting.
+
 ## Configuring custom properties
 
 To allow for the Trino to publish details that may be pertinent to it's downstream listeners. For instance, if multiple Trino clusters are being one, and you want to include information about which one has processed the query,
 that information can be baked into the configuration and sent with each payload.
 
-## Parent nesting key & payload publication
-
-The structure of the payload can be configurable, such that the payload Trino creates can be nested under some number of keys.
-If ommitted, then the payload will not be given any nesting.
+If parent nesting keys are omitted, then the custom properties will also be omitted.
 
 For example, given a `parent-parent-keys` property like `key1.key2`, the payload will look like:
 
@@ -85,7 +107,8 @@ For example, given a `parent-parent-keys` property like `key1.key2`, the payload
   "key1": {
     "key2": {
       "<trino-field1>": "...",
-      "<trino-field2>": "..."
+      "<trino-field2>": "...",
+      "...": "..."
     },
     "x-custom-<key_string1>": "<value1>",
     "x-custom-<key_stringN>": "<valueN>"
@@ -94,6 +117,16 @@ For example, given a `parent-parent-keys` property like `key1.key2`, the payload
 ```
 
 The custom properties will live as a sibling field to the payload.
+
+Otherwise, if no parent nesting keys are given, then the payload will look like
+
+```json
+{
+  "<trino-field1>": "...",
+  "<trino-field2>": "...",
+  "...": "..."
+}
+```
 
 # License
 
