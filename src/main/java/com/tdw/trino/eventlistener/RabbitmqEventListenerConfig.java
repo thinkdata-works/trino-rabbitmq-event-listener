@@ -160,9 +160,6 @@ public class RabbitmqEventListenerConfig {
         }
 
         public RabbitmqEventListenerConfig Build() throws IllegalArgumentException {
-            // TODO - ensure that server url, exchange name and type are all set
-
-
             // Split queue names and enforce argument exception based on boolean setting
             Set<String> queryCreatedQueueNames = Arrays.stream(this.queryCreatedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
             if (this.publishQueryCreated && queryCreatedQueueNames.size() < 1) {
