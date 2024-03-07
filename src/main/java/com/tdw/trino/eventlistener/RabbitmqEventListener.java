@@ -22,7 +22,13 @@ public class RabbitmqEventListener implements EventListener {
 
     public RabbitmqEventListener(RabbitmqEventListenerConfig config) {
         this.config = config;
-        this.client = new RabbitmqClient(config.getUrl(), config.getExchangeName(), config.getExchangeType(), config.isDurableExchange());
+        this.client = new RabbitmqClient(
+                config.getUrl(),
+                config.getExchangeName(),
+                config.getExchangeType(),
+                config.isDurableExchange(),
+                config.shouldSuppressConnectionErrors()
+        );
     }
 
     @Override
@@ -66,9 +72,14 @@ public class RabbitmqEventListener implements EventListener {
             ObjectMapper mapper = new ObjectMapper()
                     .registerModule(new JSR310Module())
                     .registerModule(new Jdk8Module());
-            return mapper.writeValueAsBytes(
-                    constructPayload(config.getPayloadParentKeys(), config.getCustomProperties(), val)
-            );
+
+            if(config.getPayloadParentKeys().size() < 1) {
+                return mapper.writeValueAsBytes(val);
+            } else {
+                return mapper.writeValueAsBytes(
+                        constructPayload(config.getPayloadParentKeys(), config.getCustomProperties(), val)
+                );
+            }
         } catch (JsonProcessingException e) {
             throw new PublicationException("Got JSON processing error payload: " + e.getMessage());
         }

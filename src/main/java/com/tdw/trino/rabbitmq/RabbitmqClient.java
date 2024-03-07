@@ -15,15 +15,28 @@ public class RabbitmqClient {
     private Channel channel;
     private String uri;
     private String exchangeName;
+    private String exchangeType;
+    private boolean durable;
 
-    public RabbitmqClient(String url, String exchangeName, String exchangeType, boolean durable) {
+    private boolean suppressConnectionErrors;
+
+    public RabbitmqClient(String url, String exchangeName, String exchangeType, boolean durable, boolean suppressConnectionErrors) {
+        this.exchangeName = exchangeName;
+        this.uri = url;
+        this.exchangeType = exchangeType;
+        this.durable = durable;
+        this.suppressConnectionErrors = suppressConnectionErrors;
+
+        System.out.println("Creating Rabbitmq connection, with suppress-connection-errors: " + suppressConnectionErrors);
         try {
-            this.uri = url;
-            this.exchangeName = exchangeName;
-            this.channel = getConnectionFactory(this.uri).newConnection().createChannel();
-            this.channel.exchangeDeclare(this.exchangeName, exchangeType, durable);
+            this.establishConnection();
         } catch(TimeoutException | IOException e) {
-            throw new ConnectionException(e.getMessage());
+            if (this.suppressConnectionErrors) {
+                System.err.println("Received error when creating rabbitmq connection: " + e.getMessage());
+                System.err.println("Connection re-attempt will be made at time of publication");
+            } else {
+                throw new ConnectionException(e.getMessage());
+            }
         }
     }
 
@@ -37,39 +50,38 @@ public class RabbitmqClient {
         }
     }
 
-    public void Publish(Set<String> queues, byte[] message) {
-        // Create a list of queues to re-try publishing on if the first attempt fails
-        Set<String> toPublishRetry = new HashSet<>();
+    private void establishConnection() throws IOException, TimeoutException {
+        this.channel = getConnectionFactory(uri).newConnection().createChannel();
+        this.channel.exchangeDeclare(exchangeName, exchangeType, durable);
+    }
 
-        // Lock on this publisher because we may need to re-open the channel if it's closed
+    public void Publish(Set<String> queues, byte[] message) {
         synchronized(this) {
-            for(String queueName: queues) {
-                try  {
-                    this.channel.basicPublish(this.exchangeName, queueName, null, message);
-                } catch(IOException e) {
-                    toPublishRetry.add(queueName);
+            // Ensure that we have a channel and it's open
+            if (this.channel == null || !this.channel.isOpen()) {
+                try {
+                    this.establishConnection();
+                } catch (IOException | TimeoutException e) {
+                    if(this.suppressConnectionErrors) {
+                        System.err.println("Attempted to create channel for publication but got error " + e.getClass() + ": " + e.getMessage());
+                        System.err.println("Message will be discarded, and another attempt will be made at publication time");
+                    } else {
+                        throw new ConnectionException(e.getMessage());
+                    }
                 }
             }
 
-            for(String queueName: toPublishRetry) {
-                if (!this.channel.isOpen()) {
-                    try {
-                        System.out.println("Rabbitmq channel has been closed -- attempting to reopen and republish");
-                        // Reset the channel if it closed on us
-                        this.channel = getConnectionFactory(this.uri).newConnection().createChannel();
-                    } catch (TimeoutException | IOException e) {
+            // If we have an open channel, publish
+            for (String queueName: queues) {
+                try {
+                    this.channel.basicPublish(this.exchangeName, queueName, null, message);
+                } catch(IOException e) {
+                    if(this.suppressConnectionErrors) {
+                        System.err.println("Attempted to publish message but got error " + e.getClass() + ": " + e.getMessage());
+                    } else {
                         throw new PublicationException(e.getMessage());
                     }
                 }
-
-                try {
-                    // Attempt to re-publish on the new channel
-                    this.channel.basicPublish(this.exchangeName, queueName, null, message);
-                } catch (IOException e) {
-                    throw new PublicationException(e.getMessage());
-                }
-
-                // TODO - what if we can't publish a second time? Do we retry again?
             }
         }
     }

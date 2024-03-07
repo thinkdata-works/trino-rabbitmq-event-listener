@@ -8,6 +8,11 @@
 - Use github "Fixes #[issue]" syntax on your PRs to indicate which issues you are attempting to resolve
 - Where possible, avoid adding extra dependencies to the project
 
+## Trino Upgrading and Version Handling
+
+The version of the plugin should match one-to-one with the version of Trino. This is specified in the gradle properties, and pulls the Trino SPI of that same verison.
+Ensure that the Trino version is included in the created jar file, and that the release is tagged to match that version.
+
 ## Sign-off your Commits
 
 We encourage contributors to "sign-off" on their commits:
