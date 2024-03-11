@@ -107,7 +107,7 @@ that information can be baked into the configuration and sent with each payload.
 
 If parent nesting keys are omitted, then the custom properties will also be omitted.
 
-For example, given a `parent-parent-keys` property like `key1.key2`, the payload will look like:
+For example, given a `payload-parent-keys` property like `key1.key2`, the payload will look like:
 
 ```json
 {
