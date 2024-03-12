@@ -84,7 +84,7 @@ public class RabbitmqEventListener implements EventListener {
         }
     }
 
-    public static Payload constructPayload(List<String> allKeys, Map<String, String> customProps, Object val) {
+    static Payload constructPayload(List<String> allKeys, Map<String, String> customProps, Object val) {
         Payload rootpayload = new Payload();
         Payload lastchild = rootpayload;
 

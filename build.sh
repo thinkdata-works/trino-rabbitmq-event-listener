@@ -7,4 +7,4 @@ echo "Copying trino-rabbitmq-event-listener output"
 
 id=$(docker create trino-rabbitmq-event-listener-builder)
 docker cp $id:/trino-rabbitmq-event-listener/build/libs/trino-rabbitmq-event-listener-440.jar ./build >/dev/null
-docker rm -v $idP
+docker rm -v $id
