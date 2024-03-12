@@ -15,7 +15,6 @@ import io.trino.spi.eventlistener.SplitCompletedEvent;
 import java.util.List;
 import java.util.Map;
 
-
 public class RabbitmqEventListener implements EventListener {
     private final RabbitmqEventListenerConfig config;
     private final RabbitmqClient client;
@@ -73,7 +72,7 @@ public class RabbitmqEventListener implements EventListener {
                     .registerModule(new JSR310Module())
                     .registerModule(new Jdk8Module());
 
-            if(config.getPayloadParentKeys().size() < 1) {
+            if(config.getPayloadParentKeys().isEmpty()) {
                 return mapper.writeValueAsBytes(val);
             } else {
                 return mapper.writeValueAsBytes(

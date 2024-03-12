@@ -13,12 +13,12 @@ import java.util.concurrent.TimeoutException;
 
 public class RabbitmqClient {
     private Channel channel;
-    private String uri;
-    private String exchangeName;
-    private String exchangeType;
-    private boolean durable;
+    private final String uri;
+    private final String exchangeName;
+    private final String exchangeType;
+    private final boolean durable;
 
-    private boolean suppressConnectionErrors;
+    private final boolean suppressConnectionErrors;
 
     public RabbitmqClient(String url, String exchangeName, String exchangeType, boolean durable, boolean suppressConnectionErrors) {
         this.exchangeName = exchangeName;
