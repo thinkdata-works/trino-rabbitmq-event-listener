@@ -1,5 +1,5 @@
-FROM gradle:8.6.0-jdk17
+FROM gradle:8.6-jdk21
 WORKDIR /trino-rabbitmq-event-listener
 COPY . /trino-rabbitmq-event-listener
 
-RUN ./gradlew shadowJar
+RUN ./gradlew clean shadowJar

@@ -29,10 +29,6 @@ public class RabbitmqEventListenerConfig {
         return suppressConnectionErrors;
     }
 
-    public boolean shouldSuppressPublicationErrors() {
-        return suppressPublicationErrors;
-    }
-
     public Set<String> getQueryCreatedQueues() {
         return queryCreatedQueues;
     }
@@ -53,20 +49,19 @@ public class RabbitmqEventListenerConfig {
         return this.customProperties;
     }
 
-    private String url;
-    private String exchangeName;
-    private String exchangeType;
-    private boolean durableExchange;
-    private boolean suppressConnectionErrors;
-    private boolean suppressPublicationErrors;
-    private Set<String> queryCreatedQueues;
-    private Set<String> queryCompletedQueues;
-    private Set<String> splitCompletedQueues;
-    private List<String> payloadParentKeys;
-    private Map<String, String> customProperties;
-    private boolean publishQueryCreated;
-    private boolean publishQueryCompleted;
-    private boolean publishSplitCompleted;
+    private final String url;
+    private final String exchangeName;
+    private final String exchangeType;
+    private final boolean durableExchange;
+    private final boolean suppressConnectionErrors;
+    private final Set<String> queryCreatedQueues;
+    private final Set<String> queryCompletedQueues;
+    private final Set<String> splitCompletedQueues;
+    private final List<String> payloadParentKeys;
+    private final Map<String, String> customProperties;
+    private final boolean publishQueryCreated;
+    private final boolean publishQueryCompleted;
+    private final boolean publishSplitCompleted;
 
     private static final String SERVER_URL = "server-url";
     private static final String SUPPRESS_CONNECTION_ERRORS = "suppress-connection-errors";
@@ -88,12 +83,12 @@ public class RabbitmqEventListenerConfig {
 
     public static class Builder {
         // required params
-        private String url;
-        private String exchangeName;
+        private final String url;
+        private final String exchangeName;
         private boolean suppressConnectionErrors;
 
         // defaulted params
-        private String exchangeType;
+        private final String exchangeType;
         private boolean durableExchange;
         private boolean publishQueryCreated;
         private String queryCreatedQueues;
@@ -101,7 +96,7 @@ public class RabbitmqEventListenerConfig {
         private String queryCompletedQueues;
         private boolean publishSplitCompleted;
         private String splitCompletedQueues;
-        private Map<String, String> customProperties;
+        private final Map<String, String> customProperties;
         private String payloadParentKeys;
 
 
@@ -162,17 +157,17 @@ public class RabbitmqEventListenerConfig {
         public RabbitmqEventListenerConfig Build() throws IllegalArgumentException {
             // Split queue names and enforce argument exception based on boolean setting
             Set<String> queryCreatedQueueNames = Arrays.stream(this.queryCreatedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
-            if (this.publishQueryCreated && queryCreatedQueueNames.size() < 1) {
+            if (this.publishQueryCreated && queryCreatedQueueNames.isEmpty()) {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + QUERY_CREATED_QUEUES);
             }
 
             Set<String> queryCompletedQueueNames = Arrays.stream(this.queryCompletedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
-            if (this.publishQueryCompleted && queryCompletedQueueNames.size() < 1) {
+            if (this.publishQueryCompleted && queryCompletedQueueNames.isEmpty()) {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + QUERY_COMPLETED_QUEUES);
             }
 
             Set<String> splitCompletedQueueNames = Arrays.stream(this.splitCompletedQueues.split(",")).map(String::strip).collect(Collectors.toSet());
-            if (this.publishSplitCompleted && splitCompletedQueueNames.size() < 1) {
+            if (this.publishSplitCompleted && splitCompletedQueueNames.isEmpty()) {
                 throw new IllegalArgumentException("At least one queue name must be supplied for " + SPLIT_COMPLETED_QUEUES);
             }
 
@@ -222,35 +217,34 @@ public class RabbitmqEventListenerConfig {
                 config.getOrDefault(EXCHANGE_NAME, ""),
                 config.getOrDefault(EXCHANGE_TYPE, "")
         ).setDurableExchange(
-                parseBoolFromConfigValue(config.get(DURABLE_EXCHANGE), false)
+                parseBoolFromConfigValue(config.get(DURABLE_EXCHANGE))
         ).setSuppressConnectionErrors(
-                parseBoolFromConfigValue(config.get(SUPPRESS_CONNECTION_ERRORS), false)
+                parseBoolFromConfigValue(config.get(SUPPRESS_CONNECTION_ERRORS))
         ).setPublishQueryCreated(
-                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_CREATED), false),
+                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_CREATED)),
                 config.getOrDefault(QUERY_CREATED_QUEUES, "")
         ).setPublishQueryCompleted(
-                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_COMPLETED), false),
+                parseBoolFromConfigValue(config.get(PUBLISH_QUERY_COMPLETED)),
                 config.getOrDefault(QUERY_COMPLETED_QUEUES, "")
         ).setPublishSplitCompleted(
-                parseBoolFromConfigValue(config.get(PUBLISH_SPLIT_COMPLETED), false),
+                parseBoolFromConfigValue(config.get(PUBLISH_SPLIT_COMPLETED)),
                 config.getOrDefault(SPLIT_COMPLETED_QUEUES, "")
         ).setPayloadParentKeys(
                 config.getOrDefault(PAYLOAD_PARENT_KEYS, "")
         );
 
         // See if config has any keys that match the custom pattern
-        config.entrySet().stream().forEach(configEntry -> {
-            String key = configEntry.getKey();
+        config.forEach((key, value) -> {
             if (key.startsWith(CUSTOM_PROPERTIES_PATTERN)) {
-               builder.addCustomProperty(key, config.get(key));
-           }
+                builder.addCustomProperty(key, config.get(key));
+            }
         });
 
         return builder.Build();
     }
 
-    private static boolean parseBoolFromConfigValue(String value, boolean defaultValue) {
-        return Optional.ofNullable(value).map(Boolean::parseBoolean).orElse(defaultValue);
+    private static boolean parseBoolFromConfigValue(String value) {
+        return Optional.ofNullable(value).map(Boolean::parseBoolean).orElse(false);
     }
 
     public boolean shouldPublishQueryCreated() {
